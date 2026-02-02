@@ -4,7 +4,6 @@ pipeline {
     options {
         timestamps()
         disableConcurrentBuilds()
-        ansiColor('xterm')
     }
 
     environment {
@@ -56,13 +55,8 @@ pipeline {
             steps {
                 echo "🚀 Deploying application using Docker Compose"
                 sh '''
-                  # Stop existing compose stack (safe even if not running)
                   docker compose down --remove-orphans || true
-
-                  # HARD CLEAN: remove any leftover manual containers
                   docker ps -aq --filter "name=bingo-" | xargs -r docker rm -f
-
-                  # Deploy fresh containers
                   docker compose up -d --build
                 '''
             }
