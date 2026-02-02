@@ -28,7 +28,7 @@ pipeline {
                     sh '''
                       docker run --rm \
                         -v "$PWD:/usr/src" \
-                        ghcr.io/sonarsource/sonar-scanner-cli \
+                        sonarsource/sonar-scanner-cli \
                         -Dsonar.projectBaseDir=/usr/src \
                         -Dsonar.host.url=$SONAR_HOST_URL \
                         -Dsonar.login=$SONAR_TOKEN
@@ -78,7 +78,6 @@ pipeline {
             steps {
                 sh '''
                   mkdir -p zap-reports
-                  sudo chown -R 1000:1000 zap-reports || true
 
                   docker run --rm \
                     -v "$PWD/zap-reports:/zap/wrk" \
