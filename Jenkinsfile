@@ -10,6 +10,7 @@ pipeline {
         BACKEND_IMAGE  = "bingo-backend:latest"
         FRONTEND_IMAGE = "bingo-frontend:latest"
         SONAR_HOST_URL = "http://192.168.80.20:9000"
+        ZAP_TARGET     = "http://192.168.80.10:3000"
     }
 
     stages {
@@ -21,13 +22,13 @@ pipeline {
             }
         }
 
-        stage('SonarQube SAST (Docker Scanner)') {
+        stage('SAST – SonarQube (Docker Scanner)') {
             steps {
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
                     sh '''
                       docker run --rm \
                         -v "$PWD:/usr/src" \
-                        sonarsource/sonar-scanner-cli \
+                        ghcr.io/sonarsource/sonar-scanner-cli \
                         -Dsonar.projectBaseDir=/usr/src \
                         -Dsonar.host.url=$SONAR_HOST_URL \
                         -Dsonar.login=$SONAR_TOKEN
@@ -36,7 +37,7 @@ pipeline {
             }
         }
 
-        stage('Build Backend Docker Image') {
+        stage('Build Backend Image') {
             steps {
                 sh '''
                   cd backend
@@ -45,7 +46,7 @@ pipeline {
             }
         }
 
-        stage('Build Frontend Docker Image') {
+        stage('Build Frontend Image') {
             steps {
                 sh '''
                   cd frontend
@@ -54,7 +55,7 @@ pipeline {
             }
         }
 
-        stage('Trivy Image Scan') {
+        stage('Image Scan – Trivy') {
             steps {
                 sh '''
                   trivy image --severity HIGH,CRITICAL ${BACKEND_IMAGE} || true
@@ -63,7 +64,7 @@ pipeline {
             }
         }
 
-        stage('Deploy (Docker Compose)') {
+        stage('Deploy Application') {
             steps {
                 sh '''
                   docker compose down --remove-orphans || true
@@ -72,14 +73,33 @@ pipeline {
                 '''
             }
         }
+
+        stage('DAST – OWASP ZAP Baseline') {
+            steps {
+                sh '''
+                  mkdir -p zap-reports
+                  sudo chown -R 1000:1000 zap-reports || true
+
+                  docker run --rm \
+                    -v "$PWD/zap-reports:/zap/wrk" \
+                    ghcr.io/zaproxy/zaproxy:stable \
+                    zap-baseline.py \
+                    -t ${ZAP_TARGET} \
+                    -r zap-report.html || true
+                '''
+            }
+        }
     }
 
     post {
+        always {
+            archiveArtifacts artifacts: 'zap-reports/zap-report.html', allowEmptyArchive: true
+        }
         success {
-            echo "✅ SUCCESS: SAST + Build + Deploy completed"
+            echo "✅ CI + SAST + DAST + Deploy completed successfully"
         }
         failure {
-            echo "❌ FAILURE: Pipeline failed"
+            echo "❌ Pipeline failed – check logs"
         }
     }
 }
