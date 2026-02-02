@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  backend:
+    image: bingo-backend
+    container_name: bingo-backend
+    ports:
+      - "5000:5000"
+
+  frontend:
+    image: bingo-frontend
+    container_name: bingo-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
