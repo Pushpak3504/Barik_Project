@@ -9,6 +9,7 @@ pipeline {
     environment {
         BACKEND_IMAGE  = "bingo-backend:latest"
         FRONTEND_IMAGE = "bingo-frontend:latest"
+        SONARQUBE_ENV  = "sonarqube"
     }
 
     stages {
@@ -18,6 +19,17 @@ pipeline {
                 echo "📥 Cloning source code from GitHub"
                 git branch: 'main',
                     url: 'https://github.com/Pushpak3504/Barik_Project.git'
+            }
+        }
+
+        stage('SonarQube SAST Analysis') {
+            steps {
+                echo "🔍 Running SonarQube SAST scan"
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh '''
+                      sonar-scanner
+                    '''
+                }
             }
         }
 
@@ -65,13 +77,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ SUCCESS: Bingo DevSecOps App deployed successfully"
+            echo "✅ SUCCESS: App built, scanned, and deployed securely"
         }
         failure {
             echo "❌ FAILURE: Pipeline failed – check logs"
-        }
-        always {
-            echo "📌 Pipeline execution finished"
         }
     }
 }
